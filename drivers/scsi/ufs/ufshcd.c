@@ -3230,10 +3230,6 @@ int ufshcd_send_command(struct ufs_hba *hba, unsigned int task_tag)
 			hba->lrb[task_tag].cmd ? "scsi_send" : "dev_cmd_send");
 	ufshcd_clk_scaling_start_busy(hba);
 	__set_bit(task_tag, &hba->outstanding_reqs);
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add request count information*/
-	recordRequestCnt(&hba->signalCtrl);
-#endif
 	ufshcd_writel(hba, 1 << task_tag, REG_UTP_TRANSFER_REQ_DOOR_BELL);
 	/* Make sure that doorbell is committed immediately */
 	wmb();
@@ -7836,10 +7832,6 @@ static irqreturn_t ufshcd_update_uic_error(struct ufs_hba *hba)
 		 */
 		dev_dbg(hba->dev, "%s: UIC Lane error reported, reg 0x%x\n",
 				__func__, reg);
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, reg, UNIPRO_ERR_PA);
-#endif
 		ufshcd_update_uic_error_cnt(hba, reg, UFS_UIC_ERROR_PA);
 		ufshcd_update_uic_reg_hist(&hba->ufs_stats.pa_err, reg);
 
@@ -7867,10 +7859,6 @@ static irqreturn_t ufshcd_update_uic_error(struct ufs_hba *hba)
 	reg = ufshcd_readl(hba, REG_UIC_ERROR_CODE_DATA_LINK_LAYER);
 	if ((reg & UIC_DATA_LINK_LAYER_ERROR) &&
 	    (reg & UIC_DATA_LINK_LAYER_ERROR_CODE_MASK)) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/*  add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, reg, UNIPRO_ERR_DL);
-#endif
 		ufshcd_update_uic_error_cnt(hba, reg, UFS_UIC_ERROR_DL);
 		ufshcd_update_uic_reg_hist(&hba->ufs_stats.dl_err, reg);
 
@@ -7893,10 +7881,6 @@ static irqreturn_t ufshcd_update_uic_error(struct ufs_hba *hba)
 	reg = ufshcd_readl(hba, REG_UIC_ERROR_CODE_NETWORK_LAYER);
 	if ((reg & UIC_NETWORK_LAYER_ERROR) &&
 	    (reg & UIC_NETWORK_LAYER_ERROR_CODE_MASK)) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, reg, UNIPRO_ERR_NL);
-#endif
 		ufshcd_update_uic_reg_hist(&hba->ufs_stats.nl_err, reg);
 		hba->uic_error |= UFSHCD_UIC_NL_ERROR;
 		retval |= IRQ_HANDLED;
@@ -7905,10 +7889,6 @@ static irqreturn_t ufshcd_update_uic_error(struct ufs_hba *hba)
 	reg = ufshcd_readl(hba, REG_UIC_ERROR_CODE_TRANSPORT_LAYER);
 	if ((reg & UIC_TRANSPORT_LAYER_ERROR) &&
 	    (reg & UIC_TRANSPORT_LAYER_ERROR_CODE_MASK)) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/*  add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, reg, UNIPRO_ERR_TL);
-#endif
 		ufshcd_update_uic_reg_hist(&hba->ufs_stats.tl_err, reg);
 		hba->uic_error |= UFSHCD_UIC_TL_ERROR;
 		retval |= IRQ_HANDLED;
@@ -7917,10 +7897,6 @@ static irqreturn_t ufshcd_update_uic_error(struct ufs_hba *hba)
 	reg = ufshcd_readl(hba, REG_UIC_ERROR_CODE_DME);
 	if ((reg & UIC_DME_ERROR) &&
 	    (reg & UIC_DME_ERROR_CODE_MASK)) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/*  add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, reg, UNIPRO_ERR_DME);
-#endif
 		ufshcd_update_uic_error_cnt(hba, reg, UFS_UIC_ERROR_DME);
 		ufshcd_update_uic_reg_hist(&hba->ufs_stats.dme_err, reg);
 		hba->uic_error |= UFSHCD_UIC_DME_ERROR;
@@ -7946,17 +7922,9 @@ static irqreturn_t ufshcd_check_errors(struct ufs_hba *hba)
 	irqreturn_t retval = IRQ_NONE;
 
 	if (hba->errors & INT_FATAL_ERRORS || hba->ce_error) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, hba->errors, UNIPRO_ERR_FATAL);
-#endif
 		queue_eh_work = true;
 	}
 	if (hba->errors & UIC_LINK_LOST) {
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-		recordUniproErr(&hba->signalCtrl, hba->errors, UNIPRO_ERR_LINK);
-#endif
 		dev_err(hba->dev, "%s: UIC_LINK_LOST received, errors 0x%x\n",
 					__func__, hba->errors);
 		queue_eh_work = true;
@@ -8154,10 +8122,6 @@ static int __ufshcd_issue_tm_cmd(struct ufs_hba *hba,
 	__set_bit(free_slot, &hba->outstanding_tasks);
 
 	/* Make sure descriptors are ready before ringing the task doorbell */
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-	/* add request count information */
-		recordRequestCnt(&hba->signalCtrl);
-#endif
 	wmb();
 
 	ufshcd_writel(hba, 1 << free_slot, REG_UTP_TASK_REQ_DOOR_BELL);
@@ -11452,10 +11416,6 @@ void ufshcd_remove(struct ufs_hba *hba)
 	remove_ufsplus_ctrl_proc();
 #endif
 #endif
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-	remove_signal_quality_proc(&hba->signalCtrl);
-#endif
 	ufs_sysfs_remove_nodes(hba->dev);
 	scsi_remove_host(hba->host);
 	/* disable interrupts */
@@ -11766,10 +11726,6 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 #if defined(CONFIG_UFSFEATURE)
 	ufsf_set_init_state(&hba->ufsf);
 #endif
-#endif
-#ifdef OPLUS_FEATURE_PADL_STATISTICS
-/* add unipro statistic information */
-	create_signal_quality_proc(&hba->signalCtrl);
 #endif
 	async_schedule(ufshcd_async_scan, hba);
 
