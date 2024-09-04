@@ -425,7 +425,6 @@ static void domain_dirty_limits(struct dirty_throttle_control *dtc)
 		bg_thresh = DIV_ROUND_UP(bg_bytes, PAGE_SIZE);
 	else
 		bg_thresh = (bg_ratio * available_memory) / PAGE_SIZE;
-
 	if (bg_thresh >= thresh)
 		bg_thresh = thresh / 2;
 	tsk = current;
@@ -528,6 +527,10 @@ int dirty_bytes_handler(struct ctl_table *table, int write,
 
 	ret = proc_doulongvec_minmax(table, write, buffer, lenp, ppos);
 	if (ret == 0 && write && vm_dirty_bytes != old_bytes) {
+		if (DIV_ROUND_UP(vm_dirty_bytes, PAGE_SIZE) > UINT_MAX) {
+			vm_dirty_bytes = old_bytes;
+			return -ERANGE;
+		}
 		writeback_set_ratelimit();
 		vm_dirty_ratio = 0;
 	}
